@@ -103,11 +103,11 @@
 </head>
 <body>
 
-  <h1>🎂 Birthday Surprise Website Documentation (Vercel + Firebase)</h1>
+  <h1>🎂 Birthday Surprise Website Documentation (Vercel + Firestore Chunking)</h1>
   <p>This document details the architecture, technical stack, user workflows, folder structure, and deployment guidelines for the interactive Birthday Surprise Website built for <strong>SYAMA</strong>.</p>
 
   <div class="info-box">
-    <p><strong>Note:</strong> This website is serverless. The frontend is hosted statically on Vercel, and the client communicates directly with Firebase Firestore and Storage for database records and file persistence.</p>
+    <p><strong>Note:</strong> This website is serverless and uses a customized Base64 Document Chunking System inside Cloud Firestore. Files of any size (up to the database free limits) are stored directly inside Firestore, avoiding the need for a Firebase Storage bucket and bypassing credit card verification requirements.</p>
   </div>
 
   <h2>🛠️ Technical Stack</h2>
@@ -123,8 +123,7 @@
   <h3>Cloud Backend &amp; Database (Serverless)</h3>
   <ul>
     <li><strong>Vercel (Hosting)</strong>: Serves static frontends with 100% uptime, instant loading speeds, and automatic SSL setup.</li>
-    <li><strong>Firebase Firestore (Database)</strong>: Real-time Cloud NoSQL database storing configuration document states and memories metadata list documents.</li>
-    <li><strong>Firebase Storage (Asset Storage)</strong>: Secure, free cloud storage bucket serving media file streams (images, videos, audios).</li>
+    <li><strong>Firebase Firestore (Database)</strong>: Real-time Cloud NoSQL database storing configuration document states, memory document lists, and segmented file chunks.</li>
   </ul>
 
   <h2>📂 Folder Structure &amp; Layout</h2>
@@ -157,8 +156,8 @@ birthday-website/
   <ul>
     <li><strong>Authentication</strong>: Secure login form requiring passcode (Default: <code>1234</code>, checked in Firestore).</li>
     <li><strong>Config settings</strong>: Change target date, update friend's name, or update passcode directly in Firestore settings document.</li>
-    <li><strong>Upload memories</strong>: Drag &amp; drop photos, videos, or audio tracks (MP3/OGG). Uploads file directly to Firebase Storage and saves metadata linking to the storage URL in Firestore.</li>
-    <li><strong>Media manager</strong>: List uploaded files, edit descriptions, or delete documents from Firestore and delete files from Firebase Storage.</li>
+    <li><strong>Upload memories</strong>: Drag &amp; drop files (MP3/OGG/MP4/PNG/JPG). Uploads are converted into a Base64 string and uploaded to a subcollection in Firestore divided into 800KB chunks.</li>
+    <li><strong>Media manager</strong>: List uploaded files, download and assemble chunks dynamically, or delete documents and all corresponding subcollection chunks from Firestore.</li>
   </ul>
 
   <h2>☁️ Vercel + Firebase Cloud Deployment</h2>
@@ -170,19 +169,18 @@ birthday-website/
     <li>Click <strong>Add Project</strong> and name it <code>syama-birthday-surprise</code>.</li>
     <li>Register a new Web App (web project setup) and copy your config keys.</li>
     <li>Open <code>public/js/firebase.js</code> and paste these keys in the config block.</li>
-    <li>Enable **Cloud Firestore** and **Firebase Storage** in their respective menus (choose Test Mode for both so they allow immediate read/write access).</li>
+    <li>Enable **Cloud Firestore** in the left sidebar:
+        <ul>
+          <li>Click **Create Database**.</li>
+          <li>Choose **Start in Test Mode** (this allows read/write access immediately, required for uploads).</li>
+          <li>Go to the **Rules** tab, check that it allows read and write, and click **Publish**.</li>
+        </ul>
+    </li>
   </ol>
 
   <h3>Step 2: Push Your Code to GitHub</h3>
   <ol>
-    <li>Initialize Git in your local folder and commit files:
-      <pre>
-git init
-git add .
-git commit -m "Initial commit with Firebase"
-      </pre>
-    </li>
-    <li>Push it to your private GitHub repository.</li>
+    <li>Push the project to your GitHub repository (already done automatically).</li>
   </ol>
 
   <h3>Step 3: Deploy to Vercel</h3>

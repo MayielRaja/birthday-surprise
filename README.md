@@ -1,6 +1,8 @@
-# 🎂 Birthday Surprise Website (Vercel + Firebase)
+# 🎂 Birthday Surprise Website (Firestore Base64 Chunking)
 
 A beautiful, premium, serverless birthday wishes website designed for **SYAMA**. The website features a live countdown lock screen, an interactive birthday cake candle blowout sequence, a sealed letter card reveal, floating balloons, background music, a polaroid photo gallery, and a secure administrator dashboard to upload memories (photos, videos, audio clips).
+
+This project uses a custom-designed **Base64 Document Chunking System** to store all media assets directly inside Cloud Firestore, bypassing the need for Firebase Storage and avoiding credit card verification requirements.
 
 ---
 
@@ -14,8 +16,7 @@ A beautiful, premium, serverless birthday wishes website designed for **SYAMA**.
 
 ### Cloud Backend & Database (Serverless)
 *   **Vercel (Hosting)**: Premium, free hosting platform that serves static frontends with 100% uptime, instant loading speeds, and automatic SSL setup.
-*   **Firebase Firestore (Database)**: Free, real-time Cloud NoSQL database storing configuration document states and memories metadata list documents.
-*   **Firebase Storage (Asset Storage)**: Secure, free cloud storage bucket serving media file streams (images, videos, audios).
+*   **Firebase Firestore (Database)**: Free, real-time Cloud NoSQL database storing configuration document states, memory document lists, and segmented file chunks.
 
 ---
 
@@ -51,8 +52,20 @@ Follow these steps to deploy your website online completely for free:
 6.  Enable **Cloud Firestore** in the left sidebar:
     *   Click **Create Database**.
     *   Start in **Test Mode** (this allows read/write access immediately, required for your uploads). Select your region and hit save.
-7.  Enable **Firebase Storage** in the left sidebar:
-    *   Click **Get Started**, choose **Test Mode**, select your region, and hit save.
+7.  Go to the **Rules** tab in your Firestore database and ensure it contains:
+    ```javascript
+    rules_version = '2';
+    service cloud.firestore {
+      match /databases/{database}/documents {
+        match /{document=**} {
+          allow read, write: if true;
+        }
+      }
+    }
+    ```
+    *   Click **Publish**.
+
+*Note: You do NOT need to enable Firebase Storage, meaning no credit card is required!*
 
 ### Step 2: Push Your Code to GitHub
 1.  Create a repository named `birthday-surprise` on [GitHub](https://github.com).
@@ -72,7 +85,7 @@ Follow these steps to deploy your website online completely for free:
 1.  Go to [vercel.com](https://vercel.com) and log in.
 2.  Click **Add New** -> **Project**.
 3.  Select your `birthday-surprise` GitHub repository and click **Import**.
-4.  Since our website files are in the `public/` directory, set the **Root Directory** field to `public` (or leave it empty if Vercel finds it, but setting it to `public` makes it serve `public` directly!).
+4.  Since our website files are in the `public/` directory, set the **Root Directory** field to `public`.
 5.  Click **Deploy**.
 
 Vercel will build your static files. Once complete, it will provide your live website link!
