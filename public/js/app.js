@@ -56,7 +56,7 @@ class ConfettiShower {
         rotation: Math.random() * 360,
         rotationSpeed: Math.random() * 12 - 6,
         speedX: Math.cos(angle) * speed,
-        speedY: Math.sin(angle) * speed - 2, // slight upward bias
+        speedY: Math.sin(angle) * speed - 2,
         opacity: 1
       });
     }
@@ -162,7 +162,6 @@ async function initApp() {
     if (docSnap.exists()) {
       appConfig = docSnap.data();
     } else {
-      // Initialize Firestore document on first ever load
       appConfig = {
         friendName: "SYAMA",
         birthdayDate: "2026-09-07",
@@ -188,7 +187,7 @@ async function initApp() {
     startBalloons();
   } catch (err) {
     console.error("Firebase config load error:", err);
-    showToast('Failed to connect to Firebase database. Check keys in firebase.js.', 'error');
+    showToast('Failed to connect to Firestore database.', 'error');
   }
 }
 
@@ -200,20 +199,17 @@ function startCountdown() {
     const now = new Date();
     const difference = targetDate - now;
 
-    // Check if birthday has arrived (or preview is set)
     if (difference <= 0 || isPreview) {
       clearInterval(timerInterval);
       unlockCelebration();
       return;
     }
 
-    // Time calculations
     const d = Math.floor(difference / (1000 * 60 * 60 * 24));
     const h = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const m = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
     const s = Math.floor((difference % (1000 * 60)) / 1000);
 
-    // Render timer box elements
     document.getElementById('days').innerText = String(d).padStart(2, '0');
     document.getElementById('hours').innerText = String(h).padStart(2, '0');
     document.getElementById('minutes').innerText = String(m).padStart(2, '0');
@@ -229,15 +225,12 @@ async function unlockCelebration() {
   if (celebrationUnlocked) return;
   celebrationUnlocked = true;
 
-  // Swap screen views
   countdownScreen.style.display = 'none';
   celebrationScreen.style.display = 'flex';
 
-  // Customize headers
   if (appConfig) {
     document.getElementById('celebration-title').innerText = `Happy Birthday, ${appConfig.friendName}! 💖`;
     
-    // Custom letter content text update
     const letterBody = document.getElementById('letter-content');
     if (letterBody) {
       letterBody.innerHTML = `
@@ -249,15 +242,12 @@ async function unlockCelebration() {
     }
   }
 
-  // Spawn confetti
   const canvas = document.getElementById('confetti-canvas');
   confetti = new ConfettiShower(canvas);
   confetti.start();
 
-  // Load memories
   loadMemories();
 
-  // Setup Birthday Cake Candle Clicks
   setupCakeBlowout();
   
   if (isPreview) {
@@ -277,8 +267,8 @@ function startBalloons() {
     balloon.className = 'balloon-element';
     
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const randomLeft = Math.random() * 90 + 5; // 5% to 95%
-    const randomDuration = Math.random() * 8 + 10; // 10s to 18s
+    const randomLeft = Math.random() * 90 + 5;
+    const randomDuration = Math.random() * 8 + 10;
     
     balloon.style.backgroundColor = randomColor;
     balloon.style.left = `${randomLeft}%`;
@@ -286,18 +276,15 @@ function startBalloons() {
     
     container.appendChild(balloon);
     
-    // Clean up
     balloon.addEventListener('animationend', () => {
       balloon.remove();
     });
   }
 
-  // Spawn initial set
   for (let i = 0; i < 6; i++) {
     setTimeout(spawnBalloon, i * 600);
   }
   
-  // Continuously spawn
   setInterval(spawnBalloon, 1800);
 }
 
@@ -312,15 +299,12 @@ function setupCakeBlowout() {
     cake.addEventListener('click', () => {
       if (cakeContainer.classList.contains('extinguished')) return;
       
-      // Get center position of the cake
       const rect = cake.getBoundingClientRect();
       const x = rect.left + rect.width / 2;
       const y = rect.top + rect.height / 2;
       
-      // Blow out candles
       cakeContainer.classList.add('extinguished');
       
-      // Explosion confetti bursts
       if (confetti) {
         confetti.burst(x, y);
         setTimeout(() => confetti.burst(x - 60, y - 20), 150);
@@ -330,7 +314,6 @@ function setupCakeBlowout() {
       
       showToast('Happy Birthday! Make a wish! 🎂🎉', 'success');
 
-      // Auto start music when they blow out the candles (if paused)
       if (audio && audio.paused) {
         audio.play().then(() => {
           playIcon.style.display = 'none';
@@ -339,7 +322,6 @@ function setupCakeBlowout() {
         }).catch(() => {});
       }
       
-      // Wait for smoke animation, then slide out cake and reveal letter
       setTimeout(() => {
         cakeContainer.style.transition = 'opacity 1s ease, transform 1s ease';
         cakeContainer.style.opacity = '0';
@@ -347,11 +329,7 @@ function setupCakeBlowout() {
         
         setTimeout(() => {
           cakeContainer.style.display = 'none';
-          
-          // Reveal Envelope Letter
           cardLetterWrapper.classList.add('reveal');
-          
-          // Fade in Memory Gallery
           galleryContainer.style.display = 'block';
           setTimeout(() => {
             galleryContainer.style.opacity = '1';
@@ -360,6 +338,35 @@ function setupCakeBlowout() {
       }, 1800);
     });
   }
+}
+
+// Re-assemble Base64 chunks from Firestore into a Blob URL
+function base64ToBlobUrl(base64String, mimeType) {
+  try {
+    const rawData = base64String.split(',')[1] || base64String;
+    const byteCharacters = atob(rawData);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: mimeType });
+    return URL.createObjectURL(blob);
+  } catch (err) {
+    console.error("Base64 to Blob conversion error:", err);
+    return '';
+  }
+}
+
+// Fetch all chunks from Firestore for a specific memory and construct the URL
+async function getMemoryFileUrl(memoryId, mimeType) {
+  const chunksSnapshot = await getDocs(collection(db, 'memories', memoryId, 'chunks'));
+  const chunksList = [];
+  chunksSnapshot.forEach(doc => chunksList.push(doc.data()));
+  
+  chunksList.sort((a, b) => a.index - b.index);
+  const fullBase64 = chunksList.map(c => c.data).join('');
+  return base64ToBlobUrl(fullBase64, mimeType);
 }
 
 // Fetch and render memories from Firestore
@@ -389,7 +396,6 @@ async function loadMemories() {
       return;
     }
 
-    // Sort chronological by date added
     memories.sort((a, b) => new Date(a.dateAdded) - new Date(b.dateAdded));
 
     memories.forEach(memory => {
@@ -399,38 +405,22 @@ async function loadMemories() {
       const randomRotate = (Math.random() * 8 - 4).toFixed(2);
       card.style.setProperty('--rotation', `${randomRotate}deg`);
 
-      // Determine content (photo vs video vs audio)
-      let mediaHTML = '';
-      if (memory.type === 'video') {
-        mediaHTML = `
-          <video controls preload="metadata">
-            <source src="${memory.fileUrl}" type="video/mp4">
-            Your browser does not support videos.
-          </video>
-        `;
-      } else if (memory.type === 'audio') {
-        mediaHTML = `
-          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; gap:15px; background:rgba(15, 11, 30, 0.05); color:var(--accent-purple); padding: 15px; border-radius:4px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 18V5l12-2v13"></path>
-              <circle cx="6" cy="18" r="3"></circle>
-              <circle cx="18" cy="16" r="3"></circle>
-            </svg>
-            <audio controls style="width: 100%;">
-              <source src="${memory.fileUrl}">
-              Your browser does not support audio files.
-            </audio>
-          </div>
-        `;
-      } else {
-        mediaHTML = `
-          <img src="${memory.fileUrl}" alt="${memory.title}" loading="lazy">
-        `;
-      }
-
+      // 1. Render initial layout with loader
       card.innerHTML = `
-        <div class="gallery-media-wrapper">
-          ${mediaHTML}
+        <div class="gallery-media-wrapper" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); min-height:180px;">
+          <div style="text-align:center;">
+            <svg class="spinner-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite; color: var(--accent-pink);">
+              <line x1="12" y1="2" x2="12" y2="6"></line>
+              <line x1="12" y1="18" x2="12" y2="22"></line>
+              <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+              <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+              <line x1="2" y1="12" x2="6" y2="12"></line>
+              <line x1="18" y1="12" x2="22" y2="12"></line>
+              <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+              <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+            </svg>
+            <p style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">Downloading...</p>
+          </div>
         </div>
         <div class="gallery-caption">
           <h3>${escapeHTML(memory.title)}</h3>
@@ -439,11 +429,49 @@ async function loadMemories() {
       `;
       
       galleryEl.appendChild(card);
+
+      // 2. Fetch chunks dynamically in background and load source
+      getMemoryFileUrl(memory.id, memory.mimeType).then(fileUrl => {
+        let mediaHTML = '';
+        if (memory.type === 'video') {
+          mediaHTML = `
+            <video controls preload="metadata">
+              <source src="${fileUrl}" type="${memory.mimeType}">
+              Your browser does not support videos.
+            </video>
+          `;
+        } else if (memory.type === 'audio') {
+          mediaHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; gap:15px; background:rgba(15, 11, 30, 0.05); color:var(--accent-purple); padding: 15px; border-radius:4px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 18V5l12-2v13"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="18" cy="16" r="3"></circle>
+              </svg>
+              <audio controls style="width: 100%;">
+                <source src="${fileUrl}" type="${memory.mimeType}">
+                Your browser does not support audio files.
+              </audio>
+            </div>
+          `;
+        } else {
+          mediaHTML = `
+            <img src="${fileUrl}" alt="${memory.title}">
+          `;
+        }
+        
+        card.querySelector('.gallery-media-wrapper').innerHTML = mediaHTML;
+      }).catch(err => {
+        console.error("Failed to load chunks for memory:", memory.id, err);
+        card.querySelector('.gallery-media-wrapper').innerHTML = `
+          <div style="color:#ff6b6b; font-size:0.75rem; text-align:center; padding:20px;">Error loading file</div>
+        `;
+      });
     });
 
   } catch (err) {
     console.error("Memories loading error:", err);
-    showToast('Could not load shared memories from cloud.', 'error');
+    showToast('Could not load memories from database.', 'error');
   }
 }
 

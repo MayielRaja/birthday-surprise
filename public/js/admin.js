@@ -1,7 +1,6 @@
 // Import Firebase references
-import { db, storage } from './firebase.js';
+import { db } from './firebase.js';
 import { doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 // Screen elements
 const authScreen = document.getElementById('auth-screen');
@@ -49,7 +48,7 @@ function showToast(message, type = 'success') {
   }, 4000);
 }
 
-// Authentication Logic against Firestore config
+// Authentication
 authForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const passcode = passcodeVal.value.trim();
@@ -70,7 +69,7 @@ authForm.addEventListener('submit', async (e) => {
       showDashboard();
     } else {
       triggerAuthShake();
-      showToast('Incorrect passcode. Please try again.', 'error');
+      showToast('Incorrect passcode.', 'error');
     }
   } catch (err) {
     console.error(err);
@@ -107,11 +106,11 @@ async function loadSettings() {
       birthdayDateInput.value = configData.birthdayDate;
     }
   } catch (err) {
-    showToast('Failed to load surprise settings.', 'error');
+    showToast('Failed to load settings.', 'error');
   }
 }
 
-// Save Settings Form Handling
+// Save Settings Form
 settingsForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -173,20 +172,18 @@ memoryFileInput.addEventListener('change', (e) => {
 });
 
 function handleFileSelected(file) {
-  // Validate file size (50MB Limit)
+  // 50MB maximum size limit
   const maxSize = 50 * 1024 * 1024;
   if (file.size > maxSize) {
-    showToast('File is too large! Maximum limit is 50MB.', 'error');
+    showToast('File size must be under 50MB.', 'error');
     memoryFileInput.value = '';
     filePreviewContainer.style.display = 'none';
     return;
   }
 
-  // Set file details
   const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
   fileDetails.innerText = `${file.name} (${sizeMB} MB)`;
 
-  // Show live preview
   filePreviewElement.innerHTML = '';
   const reader = new FileReader();
 
@@ -218,30 +215,49 @@ function handleFileSelected(file) {
     };
     reader.readAsDataURL(file);
   } else {
-    showToast('Unsupported file type. Please upload an image, video or audio file.', 'error');
+    showToast('Unsupported file type.', 'error');
     memoryFileInput.value = '';
     filePreviewContainer.style.display = 'none';
   }
 }
 
-// Upload Memory Form Submission
+// Convert a File into Base64 String Chunks (800KB size chunks)
+function fileToBase64Chunks(file, chunkSize = 800 * 1024) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64String = reader.result;
+      const chunks = [];
+      for (let i = 0; i < base64String.length; i += chunkSize) {
+        chunks.push(base64String.substring(i, i + chunkSize));
+      }
+      resolve({
+        chunks,
+        mimeType: file.type
+      });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Upload Memory Form Submission (Base64 Chunking in Firestore)
 uploadForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const file = memoryFileInput.files[0];
   if (!file) {
-    showToast('Please select a photo, video or audio first.', 'error');
+    showToast('Please select a file first.', 'error');
     return;
   }
 
   uploadSubmitBtn.disabled = true;
-  uploadSubmitBtn.innerText = 'Uploading to Cloud storage... Please wait';
+  uploadSubmitBtn.innerText = 'Converting & Uploading... Please wait';
 
   try {
     const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
     const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}${fileExt}`;
 
-    // Determine file type
     let fileType = 'photo';
     if (file.type.startsWith('video/')) {
       fileType = 'video';
@@ -249,26 +265,38 @@ uploadForm.addEventListener('submit', async (e) => {
       fileType = 'audio';
     }
 
-    // 1. Upload to Firebase Storage
-    const storageRef = ref(storage, `memories/${uniqueFilename}`);
-    const uploadResult = await uploadBytes(storageRef, file);
-    const downloadUrl = await getDownloadURL(uploadResult.ref);
+    // 1. Chunk file into Base64 segments
+    const { chunks, mimeType } = await fileToBase64Chunks(file);
+    const totalChunks = chunks.length;
 
-    // 2. Save metadata in Firestore
+    // 2. Write metadata document to "memories" collection
     const newMemory = {
       filename: uniqueFilename,
-      fileUrl: downloadUrl,
       title: memoryTitleInput.value.trim(),
       caption: memoryCaptionInput.value.trim(),
       type: fileType,
+      mimeType: mimeType,
+      totalChunks: totalChunks,
       dateAdded: new Date().toISOString()
     };
-    
-    await addDoc(collection(db, 'memories'), newMemory);
+
+    uploadSubmitBtn.innerText = `Uploading metadata...`;
+    const memoryDocRef = await addDoc(collection(db, 'memories'), newMemory);
+
+    // 3. Upload chunk documents to "chunks" subcollection
+    for (let i = 0; i < totalChunks; i++) {
+      const percentage = Math.round(((i + 1) / totalChunks) * 100);
+      uploadSubmitBtn.innerText = `Uploading parts: ${percentage}%`;
+
+      await addDoc(collection(db, 'memories', memoryDocRef.id, 'chunks'), {
+        index: i,
+        data: chunks[i]
+      });
+    }
 
     showToast('Memory uploaded successfully!', 'success');
     
-    // Reset uploader
+    // Reset
     uploadForm.reset();
     filePreviewContainer.style.display = 'none';
     filePreviewElement.innerHTML = '';
@@ -282,6 +310,33 @@ uploadForm.addEventListener('submit', async (e) => {
     uploadSubmitBtn.innerText = 'Upload to Memory Lane';
   }
 });
+
+// Re-assemble Base64 chunks into Blob URL (copied helper for admin previews)
+function base64ToBlobUrl(base64String, mimeType) {
+  try {
+    const rawData = base64String.split(',')[1] || base64String;
+    const byteCharacters = atob(rawData);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: mimeType });
+    return URL.createObjectURL(blob);
+  } catch (err) {
+    return '';
+  }
+}
+
+async function getMemoryFileUrl(memoryId, mimeType) {
+  const chunksSnapshot = await getDocs(collection(db, 'memories', memoryId, 'chunks'));
+  const chunksList = [];
+  chunksSnapshot.forEach(doc => chunksList.push(doc.data()));
+  
+  chunksList.sort((a, b) => a.index - b.index);
+  const fullBase64 = chunksList.map(c => c.data).join('');
+  return base64ToBlobUrl(fullBase64, mimeType);
+}
 
 // Load and render memories in editor list
 async function loadAdminMemories() {
@@ -303,62 +358,75 @@ async function loadAdminMemories() {
       adminGalleryList.innerHTML = `
         <div style="text-align: center; padding: 40px 10px; color: var(--text-muted);">
           <p style="font-style: italic; margin-bottom: 5px;">No memories uploaded yet.</p>
-          <p style="font-size: 0.8rem;">Use the form to upload your first photo or video!</p>
         </div>
       `;
       return;
     }
 
     adminGalleryList.innerHTML = '';
-    
-    // Sort reverse chronological
     memories.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
 
     memories.forEach(memory => {
       const item = document.createElement('div');
       item.className = 'admin-gallery-item';
 
-      let mediaThumb = '';
-      if (memory.type === 'video') {
-        mediaThumb = `<video src="${memory.fileUrl}" muted preload="metadata"></video>`;
-      } else if (memory.type === 'audio') {
-        mediaThumb = `
-          <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; background:rgba(255,255,255,0.05); color:var(--accent-purple);">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 18V5l12-2v13"></path>
-              <circle cx="6" cy="18" r="3"></circle>
-              <circle cx="18" cy="16" r="3"></circle>
-            </svg>
-          </div>
-        `;
-      } else {
-        mediaThumb = `<img src="${memory.fileUrl}" alt="${memory.title}">`;
-      }
-
-      const uploadDate = new Date(memory.dateAdded).toLocaleDateString();
-
+      // Use dynamic loading preview inside the list thumbnails
       item.innerHTML = `
-        <div class="admin-gallery-thumb">
-          ${mediaThumb}
+        <div class="admin-gallery-thumb" id="thumb-${memory.docId}" style="display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.03);">
+          <svg class="spinner-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite; color: var(--text-muted);">
+            <line x1="12" y1="2" x2="12" y2="6"></line>
+            <line x1="12" y1="18" x2="12" y2="22"></line>
+            <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+            <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+            <line x1="2" y1="12" x2="6" y2="12"></line>
+            <line x1="18" y1="12" x2="22" y2="12"></line>
+          </svg>
         </div>
         <div class="admin-gallery-details">
           <h4>${escapeHTML(memory.title)}</h4>
-          <p>${escapeHTML(memory.caption || 'No caption description added')}</p>
-          <span style="font-size: 0.7rem; color: var(--text-muted);">Type: ${memory.type} | Added: ${uploadDate}</span>
+          <p>${escapeHTML(memory.caption || 'No description')}</p>
+          <span style="font-size: 0.7rem; color: var(--text-muted);">Type: ${memory.type} | Added: ${new Date(memory.dateAdded).toLocaleDateString()}</span>
         </div>
         <button class="btn btn-danger btn-delete-memory" style="padding: 8px 12px; font-size: 0.85rem;" title="Delete Memory">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            <line x1="10" y1="11" x2="10" y2="17"></line>
-            <line x1="14" y1="11" x2="14" y2="17"></line>
           </svg>
         </button>
       `;
 
-      // Attach delete click listener
+      // Load thumbnail source in background
+      getMemoryFileUrl(memory.docId, memory.mimeType).then(fileUrl => {
+        const thumbContainer = item.querySelector(`#thumb-${memory.docId}`);
+        if (!thumbContainer) return;
+        
+        let mediaThumb = '';
+        if (memory.type === 'video') {
+          mediaThumb = `<video src="${fileUrl}" muted></video>`;
+        } else if (memory.type === 'audio') {
+          mediaThumb = `
+            <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; color:var(--accent-purple);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 18V5l12-2v13"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="18" cy="16" r="3"></circle>
+              </svg>
+            </div>
+          `;
+        } else {
+          mediaThumb = `<img src="${fileUrl}" alt="">`;
+        }
+        
+        thumbContainer.innerHTML = mediaThumb;
+      }).catch(() => {
+        const thumbContainer = item.querySelector(`#thumb-${memory.docId}`);
+        if (thumbContainer) {
+          thumbContainer.innerHTML = `<span style="font-size:0.6rem; color:#ff6b6b;">Error</span>`;
+        }
+      });
+
       const deleteBtn = item.querySelector('.btn-delete-memory');
-      deleteBtn.addEventListener('click', () => deleteMemory(memory.docId, memory.filename, memory.title));
+      deleteBtn.addEventListener('click', () => deleteMemory(memory.docId, memory.title));
 
       adminGalleryList.appendChild(item);
     });
@@ -368,40 +436,44 @@ async function loadAdminMemories() {
   }
 }
 
-// Delete Memory function
-async function deleteMemory(docId, filename, title) {
-  const confirmDelete = confirm(`Are you sure you want to delete the memory "${title}"? This cannot be undone.`);
+// Delete Memory (removes all subcollection chunk documents and parent)
+async function deleteMemory(docId, title) {
+  const confirmDelete = confirm(`Are you sure you want to delete "${title}"?`);
   if (!confirmDelete) return;
 
   try {
-    // 1. Delete file from Storage
-    const storageRef = ref(storage, `memories/${filename}`);
-    await deleteObject(storageRef);
+    showToast('Deleting memory...', 'success');
+    
+    // 1. Delete all chunks in subcollection
+    const chunksSnapshot = await getDocs(collection(db, 'memories', docId, 'chunks'));
+    const deletePromises = [];
+    chunksSnapshot.forEach(chunkDoc => {
+      deletePromises.push(deleteDoc(doc(db, 'memories', docId, 'chunks', chunkDoc.id)));
+    });
+    await Promise.all(deletePromises);
 
-    // 2. Delete metadata from Firestore
+    // 2. Delete parent document
     await deleteDoc(doc(db, 'memories', docId));
 
-    showToast('Memory deleted successfully!', 'success');
+    showToast('Deleted successfully!', 'success');
     loadAdminMemories();
   } catch (err) {
     console.error(err);
-    showToast('Error deleting memory from cloud.', 'error');
+    showToast('Error deleting memory.', 'error');
   }
 }
 
-// Logout handling
-logoutBtn.addEventListener('click', handleLogout);
-
-function handleLogout() {
+// Logout
+logoutBtn.addEventListener('click', () => {
   localStorage.removeItem('surprise_admin_token');
   token = '';
   showToast('Logged out.', 'success');
   authScreen.style.display = 'flex';
   dashboardScreen.style.display = 'none';
   passcodeVal.value = '';
-}
+});
 
-// HTML Escaper for XSS protection
+// HTML Escaper for XSS
 function escapeHTML(str) {
   if (!str) return '';
   return str
