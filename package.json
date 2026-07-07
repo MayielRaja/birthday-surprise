@@ -1,0 +1,12 @@
+{
+  "name": "birthday-website",
+  "version": "1.0.0",
+  "description": "A beautiful birthday wish website for a friend with a countdown lock and media memories admin management.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {}
+}

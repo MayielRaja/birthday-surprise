@@ -1,0 +1,197 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="utf-8">
+<title>Surprise Website Documentation</title>
+<!--[if gte mso 9]>
+<xml>
+ <w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>100</w:Zoom>
+  <w:DoNotOptimizeForBrowser/>
+ </w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    line-height: 1.6;
+    color: #2b2545;
+    margin: 1in;
+  }
+  h1 {
+    font-size: 26pt;
+    color: #8a2be2;
+    border-bottom: 2px solid #ff2a74;
+    padding-bottom: 6px;
+    margin-top: 0;
+    margin-bottom: 18pt;
+  }
+  h2 {
+    font-size: 18pt;
+    color: #ff2a74;
+    margin-top: 24pt;
+    margin-bottom: 12pt;
+    border-bottom: 1px solid #eaeaea;
+    padding-bottom: 4px;
+  }
+  h3 {
+    font-size: 14pt;
+    color: #3d365e;
+    margin-top: 18pt;
+    margin-bottom: 6pt;
+  }
+  p {
+    font-size: 11pt;
+    margin-bottom: 12pt;
+  }
+  ul, ol {
+    margin-bottom: 12pt;
+    padding-left: 20pt;
+  }
+  li {
+    font-size: 11pt;
+    margin-bottom: 6pt;
+  }
+  code {
+    font-family: 'Consolas', Courier, monospace;
+    background-color: #f4f2f9;
+    color: #ff2a74;
+    padding: 2px 4px;
+    font-size: 10pt;
+    border-radius: 4px;
+  }
+  pre {
+    font-family: 'Consolas', Courier, monospace;
+    background-color: #f8f6fb;
+    border: 1px solid #e1dbec;
+    padding: 12pt;
+    font-size: 9.5pt;
+    color: #2b2545;
+    margin-bottom: 18pt;
+    white-space: pre-wrap;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 18pt;
+    margin-top: 12pt;
+  }
+  th, td {
+    border: 1px solid #dcd1ed;
+    padding: 10px 12px;
+    font-size: 10.5pt;
+    text-align: left;
+  }
+  th {
+    background-color: #f4effb;
+    color: #8a2be2;
+    font-weight: bold;
+  }
+  .info-box {
+    background-color: #fbf5f7;
+    border-left: 4px solid #ff2a74;
+    padding: 12px 18px;
+    margin-bottom: 18pt;
+    border-radius: 0 6px 6px 0;
+  }
+  .info-box p {
+    margin: 0;
+    font-style: italic;
+    color: #6a5a75;
+  }
+</style>
+</head>
+<body>
+
+  <h1>🎂 Birthday Surprise Website Documentation (Vercel + Firebase)</h1>
+  <p>This document details the architecture, technical stack, user workflows, folder structure, and deployment guidelines for the interactive Birthday Surprise Website built for <strong>SYAMA</strong>.</p>
+
+  <div class="info-box">
+    <p><strong>Note:</strong> This website is serverless. The frontend is hosted statically on Vercel, and the client communicates directly with Firebase Firestore and Storage for database records and file persistence.</p>
+  </div>
+
+  <h2>🛠️ Technical Stack</h2>
+  
+  <h3>Frontend (User Interface)</h3>
+  <ul>
+    <li><strong>HTML5 &amp; CSS3 (Vanilla)</strong>: Custom layout modules, modern HSL blur blobs, responsive grids, and glassmorphic panels.</li>
+    <li><strong>JavaScript (ES6 Modules)</strong>: Client-side routing, interactive states, time calculations, and direct database queries using the Firebase Web JS SDK.</li>
+    <li><strong>HTML5 Canvas API</strong>: Powering the custom confetti particle animation system.</li>
+    <li><strong>CSS Keyframe Animations</strong>: Directs balloon floating cycles, polaroid tilts, card scale-ups, and candle flame flickers.</li>
+  </ul>
+
+  <h3>Cloud Backend &amp; Database (Serverless)</h3>
+  <ul>
+    <li><strong>Vercel (Hosting)</strong>: Serves static frontends with 100% uptime, instant loading speeds, and automatic SSL setup.</li>
+    <li><strong>Firebase Firestore (Database)</strong>: Real-time Cloud NoSQL database storing configuration document states and memories metadata list documents.</li>
+    <li><strong>Firebase Storage (Asset Storage)</strong>: Secure, free cloud storage bucket serving media file streams (images, videos, audios).</li>
+  </ul>
+
+  <h2>📂 Folder Structure &amp; Layout</h2>
+  <p>The project directory is structured as follows:</p>
+  <pre>
+birthday-website/
+├── package.json             # Local server script configuration
+├── server.js                # Core Node.js HTTP local static server (for local dev testing only)
+└── public/                  # Static assets uploaded directly to Vercel
+    ├── admin.html           # Administrator panel HTML
+    ├── index.html           # Main landing page HTML
+    ├── css/
+    │   └── style.css        # Main CSS stylesheet
+    ├── js/
+    │   ├── firebase.js      # Firebase connection configuration settings
+    │   ├── app.js           # Client script for countdown and cake clicks
+    │   └── admin.js         # Editor client script connected to Firebase
+  </pre>
+
+  <h2>🔄 System Workflows</h2>
+
+  <h3>1. Public User Experience (Friend's View)</h3>
+  <ol>
+    <li><strong>Lock Phase (Before September 7th)</strong>: Displays a premium countdown clock, a locked birthday present box, and the dynamic greeting <em>"Surprise for SYAMA"</em>. Colorful balloons float continuously in the background.</li>
+    <li><strong>Celebration Screen (Unlocked)</strong>: Replaces the countdown screen. A customized header loads, background music autoplays, and a layered CSS birthday cake appears.</li>
+    <li><strong>Cake Interaction</strong>: Clicking the cake blows out the candles (extinguishing flames and emitting smoke puffs), triggers a massive confetti explosion, and reveals a sealed birthday card letter and the Polaroid memories gallery below.</li>
+  </ol>
+
+  <h3>2. Editor Dashboard Experience (/admin)</h3>
+  <ul>
+    <li><strong>Authentication</strong>: Secure login form requiring passcode (Default: <code>1234</code>, checked in Firestore).</li>
+    <li><strong>Config settings</strong>: Change target date, update friend's name, or update passcode directly in Firestore settings document.</li>
+    <li><strong>Upload memories</strong>: Drag &amp; drop photos, videos, or audio tracks (MP3/OGG). Uploads file directly to Firebase Storage and saves metadata linking to the storage URL in Firestore.</li>
+    <li><strong>Media manager</strong>: List uploaded files, edit descriptions, or delete documents from Firestore and delete files from Firebase Storage.</li>
+  </ul>
+
+  <h2>☁️ Vercel + Firebase Cloud Deployment</h2>
+  <p>Follow these steps to host the application online for free:</p>
+
+  <h3>Step 1: Set Up Your Firebase Project</h3>
+  <ol>
+    <li>Go to <code>console.firebase.google.com</code> and register a free account.</li>
+    <li>Click <strong>Add Project</strong> and name it <code>syama-birthday-surprise</code>.</li>
+    <li>Register a new Web App (web project setup) and copy your config keys.</li>
+    <li>Open <code>public/js/firebase.js</code> and paste these keys in the config block.</li>
+    <li>Enable **Cloud Firestore** and **Firebase Storage** in their respective menus (choose Test Mode for both so they allow immediate read/write access).</li>
+  </ol>
+
+  <h3>Step 2: Push Your Code to GitHub</h3>
+  <ol>
+    <li>Initialize Git in your local folder and commit files:
+      <pre>
+git init
+git add .
+git commit -m "Initial commit with Firebase"
+      </pre>
+    </li>
+    <li>Push it to your private GitHub repository.</li>
+  </ol>
+
+  <h3>Step 3: Deploy to Vercel</h3>
+  <ol>
+    <li>Log into <code>vercel.com</code> and click <strong>Add Project</strong>.</li>
+    <li>Select your GitHub repository.</li>
+    <li>Configure the **Root Directory** field to <code>public</code> (this serves the public folder directly).</li>
+    <li>Click <strong>Deploy</strong>. Your site is live!</li>
+  </ol>
+
+</body>
+</html>

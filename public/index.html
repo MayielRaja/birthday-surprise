@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Special Surprise For You</title>
+  <meta name="description" content="A beautiful countdown surprise and gallery of memories.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Animated Background Elements -->
+  <div class="bg-gradient-mesh"></div>
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+
+  <!-- Global Balloon Container -->
+  <div id="balloon-container" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 4; overflow: hidden;"></div>
+
+  <!-- Admin Link (Gear Icon) -->
+  <a href="admin.html" id="admin-link" style="position: fixed; top: 20px; right: 20px; z-index: 100; color: var(--text-muted); transition: var(--transition-smooth);" title="Admin Dashboard">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.5 1z"></path>
+    </svg>
+  </a>
+
+  <!-- SCREEN 1: COUNTDOWN SURPRISE (LOCKED) -->
+  <div id="countdown-screen" class="screen-container">
+    <div class="countdown-wrapper glass-panel">
+      <div class="countdown-header">
+        <h1 class="title-gradient" id="countdown-title">Surprise for SYAMA</h1>
+        <p>A vault of shared memories is waiting to be unlocked.</p>
+      </div>
+
+      <!-- Live Timer Grid -->
+      <div class="timer-grid">
+        <div class="timer-box">
+          <span id="days" class="timer-number">00</span>
+          <span class="timer-label">Days</span>
+        </div>
+        <div class="timer-box">
+          <span id="hours" class="timer-number">00</span>
+          <span class="timer-label">Hours</span>
+        </div>
+        <div class="timer-box">
+          <span id="minutes" class="timer-number">00</span>
+          <span class="timer-label">Mins</span>
+        </div>
+        <div class="timer-box">
+          <span id="seconds" class="timer-number">00</span>
+          <span class="timer-label">Secs</span>
+        </div>
+      </div>
+
+      <!-- Birthday Present Surprise Card -->
+      <div class="locked-card">
+        <!-- SVG Present box icon representing birthday elements -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 12 20 22 4 22 4 12"></polyline>
+          <rect x="2" y="7" width="20" height="5"></rect>
+          <line x1="12" y1="22" x2="12" y2="7"></line>
+          <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+          <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+        </svg>
+        <p id="countdown-teaser">The surprise unlocks on your birthday!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: BIRTHDAY CELEBRATION (UNLOCKED) -->
+  <div id="celebration-screen" class="screen-container" style="display: none;">
+    <!-- Confetti & Celebration Overlay Canvas -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <div class="celebration-header">
+      <h1 class="title-gold" id="celebration-title">Happy Birthday!</h1>
+      <p id="celebration-subtitle">Here is a collection of our beautiful moments together...</p>
+    </div>
+
+    <!-- Music Player Card -->
+    <div class="audio-card glass-panel" id="music-card">
+      <div class="music-disk" id="music-disk"></div>
+      <div class="audio-info">
+        <h4 id="song-title">Gymnopédie No. 1</h4>
+        <p id="song-artist">Erik Satie (Piano Solo)</p>
+      </div>
+      <button class="btn btn-primary" id="play-btn" style="padding: 10px 14px; border-radius: 50%;">
+        <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <svg id="pause-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+          <rect x="6" y="4" width="4" height="16"></rect>
+          <rect x="14" y="4" width="4" height="16"></rect>
+        </svg>
+      </button>
+      <audio id="bg-audio" loop src="https://upload.wikimedia.org/wikipedia/commons/3/3d/Erik_Satie_-_Gymnopedie_No._1.ogg"></audio>
+    </div>
+
+    <!-- Interactive Birthday Cake -->
+    <div class="cake-container" id="cake-container">
+      <div class="wish-instruction">🎂 Make a wish and click the cake to blow the candles! 🎂</div>
+      <div class="cake" id="birthday-cake">
+        <div class="plate"></div>
+        <div class="cake-layer layer-bottom"></div>
+        <div class="cake-layer layer-middle"></div>
+        <div class="cake-layer layer-top"></div>
+        <div class="icing-drips"></div>
+        <div class="candles-group">
+          <div class="candle-stick candle-stick-1">
+            <div class="candle-flame"></div>
+            <div class="smoke-puff"></div>
+          </div>
+          <div class="candle-stick candle-stick-2">
+            <div class="candle-flame"></div>
+            <div class="smoke-puff"></div>
+          </div>
+          <div class="candle-stick candle-stick-3">
+            <div class="candle-flame"></div>
+            <div class="smoke-puff"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Envelope / Letter Card Surprise -->
+    <div class="card-letter-wrapper" id="card-letter-wrapper">
+      <div class="letter-envelope">
+        <h2 class="letter-title">A Message For You</h2>
+        <p class="letter-body" id="letter-content">
+          Happy Birthday, SYAMA! 💖<br><br>
+          Today is all about you! We've locked away some of our best memories and snapshots of laughter here. 
+          Scroll down below to stroll down our memory lane and relive some of our most precious moments. 
+          Wishing you a year filled with magic, success, and endless joy!
+        </p>
+        <div class="letter-signature">— With Love, Yours</div>
+      </div>
+    </div>
+
+    <!-- Polaroid Gallery Section (Wrapper dynamically faded in) -->
+    <div id="gallery-container" style="display: none; opacity: 0; transition: opacity 0.8s ease; width: 100%;">
+      <h2 class="gallery-section-title title-gradient" style="margin-top: 50px;">Our Memory Lane</h2>
+      <div class="gallery-grid" id="memories-gallery">
+        <!-- Dynamically filled with memories -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast / Notifications -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
